@@ -1,7 +1,7 @@
 defmodule Blinkt.Pixelbar do
   use Agent
 
-  def start_link(opts) do
+  def start_link(opts \\ %{}) do
     Agent.start_link(fn -> %{} end)
   end
 
@@ -16,6 +16,11 @@ defmodule Blinkt.Pixelbar do
 
   def set(pixels, idx, pixel) do
     Agent.update(pixels, &Map.put(&1, idx, pixel))
+  end
+
+  def set_lux(pixels, idx, lux) do
+    pix = %Blinkt.Pixel{Blinkt.Pixelbar.get(pixels, idx) | lux: lux}
+    Blinkt.Pixelbar.set(pixels, idx, pix)
   end
 
 end

@@ -1,18 +1,11 @@
 defmodule Blinkt do
-  @moduledoc """
-  Documentation for Blinkt.
-  """
+  use Bitwise
 
-  @doc """
-  Hello world.
+  def start_link(opts) do
+    {:ok, pixelbar} = Blinkt.Pixelbar.start_link(opts)
+  end
 
-  ## Examples
+  def set_lux(pixelbar, lux) do
 
-      iex> Blinkt.hello
-      :world
-
-  """
-  def hello do
-    :world
   end
 end
