@@ -13,7 +13,7 @@ defmodule Blinkt do
   end
 
   def set_brightness(brightness) do
-    0..7 |> Enum.map(fn i -> Pixels.set_lux(i, brightness) end)
+    0..7 |> Enum.map(fn i -> Pixels.set_pixel(i, brightness) end)
     :ok
   end
 
@@ -31,7 +31,7 @@ defmodule Blinkt do
   end
 
   def set_pixel(x, r, g, b, brightness) do
-    Pixels.set(x, %Pixel{red: r, green: g, blue: b, lux: brightness})
+    Pixels.put(x, %Pixel{red: r, green: g, blue: b, lux: brightness})
     :ok
   end
 
