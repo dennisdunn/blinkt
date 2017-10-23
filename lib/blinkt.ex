@@ -19,7 +19,7 @@ defmodule Blinkt do
   end
 
   def clear() do
-    for _ <- 0..7, do: Pixels.set_pixel(i, %Pixel{lux: 0.2})
+    for i <- 0..7, do: Pixels.set_pixel(i, %Pixel{lux: 0.2})
   end
 
   def show() do
