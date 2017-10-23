@@ -2,32 +2,30 @@ defmodule Blinkt do
   use Bitwise
   alias Blinkt.Pixel
   alias Blinkt.Pixels
- # alias Pigpiox.GPIO
+  alias Pigpiox.GPIO
 
   @dat 23
   @clk 24
 
   def start() do
-    Pixels.start_link
-    Pixels.init
-    Blinkt._setup_gpio
+    Pixels.start_link()
+    Pixels.init()
+    _setup_gpio()
     :ok
   end
 
   def set_brightness(brightness) do
-    0..7 |> Enum.map(fn i -> Pixels.set_pixel(i, brightness) end)
-    :ok
+    for i <- 0..7, do: Pixels.set_pixel(i, brightness) 
   end
 
   def clear() do
-    0..7 |> Enum.map(fn i -> Pixels.set(i, %Pixel{lux: 0.2}) end)
-    :ok
+    for _ <- 0..7, do: Pixels.set_pixel(i, %Pixel{lux: 0.2})
   end
 
   def show() do
-    Blinkt._sof
-    0..7 |> Enum.map(fn i ->  _write_pixel(Pixels.get(i)) end)
-    Blinkt._eof
+    _sof()
+    for i <- 0..7, do:  _write_pixel(Pixels.get(i))
+    _eof()
   end
 
   def get_pixel(x) do
@@ -40,28 +38,25 @@ defmodule Blinkt do
   end
 
   def set_all(r, g, b, brightness) do 
-    0..7 |> Enum.map(fn i -> Blinkt.set_pixel(i, r, g, b, brightness) end)
-    :ok
+    for i <- 0..7, do: Blinkt.set_pixel(i, r, g, b, brightness)
   end
 
   defp _sof do
-    Blinkt._pulse_data_line(32)
+    for _ <- 1..32, do: _pulse_gpio_pin(@dat)
   end
 
   defp _eof do
-    Blinkt._pulse_data_line(36)
+    for _ <- 1..36, do: _pulse_gpio_pin(@dat)
   end
 
   defp _write_pixel(pixel) do
+    GPIO.write(@dat, 0)
+    GPIO.write(@clk, 0)
     %Pixel{red: r, green: g, blue: b, lux: brightness} = pixel
-    Blinkt._write_byte(trunc(brightness * 31) &&& 31)
-    Blinkt._write_byte(b)
-    Blinkt._write_byte(g)
-    Blinkt._write_byte(r)
-  end
-
-  def waa(bits) do
-  Blinkt._write_byte(bits)
+    _write_byte(<<trunc(brightness * 31) &&& 31>>)
+    _write_byte(<<b>>)
+    _write_byte(<<g>>)
+    _write_byte(<<r>>)
   end
 
   defp _write_byte(bits) when bits == <<>> do
@@ -69,20 +64,19 @@ defmodule Blinkt do
   end
   defp _write_byte(bits) do
     <<b::size(1), rest::bitstring>> = bits
-    IO.puts b
-    Blinkt._write_byte(rest)
+    GPIO.write(@dat, b)
+    _pulse_gpio_pin(@clk)
+    _write_byte(rest)
   end
 
-  defp _pulse_data_line(n) do
-    # GPIO.write(@dat, 0)
-    # 1..n |> Enum.map(fn () -> GPIO.write(@dat, 1)
-    # GPIO.write(@dat, 0)
-    # end)
+  defp _pulse_gpio_pin(pin) do
+    GPIO.write(pin, 1)
+    GPIO.write(pin, 0)
   end
 
   defp _setup_gpio do
-    # GPIO.set_mode(@dat, :output)
-    # GPIO.set_mode(@clk, :output)
+    GPIO.set_mode(@dat, :output)
+    GPIO.set_mode(@clk, :output)
   end
   
 end
