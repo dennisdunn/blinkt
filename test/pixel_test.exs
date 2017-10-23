@@ -1,34 +1,33 @@
 defmodule Blinkt.PixelTest do
   use ExUnit.Case, async: true
+  alias Blinkt.Pixel
+  alias Blinkt.Pixels
 
   setup do
-    {:ok, pixelbar} = start_supervised Blinkt.Pixelbar
-    %{pixelbar: pixelbar, pixel: %Blinkt.Pixel{}}
+    start_supervised Pixels
+    Pixels.init()
   end
 
-  test "store pixel by index", %{pixelbar: pixelbar} do
-    assert Blinkt.Pixelbar.get(pixelbar, 0) == nil
+  test "store pixel by index" do
+    assert Pixels.get(0) == nil
 
-    Blinkt.Pixelbar.set(pixelbar, 3, %Blinkt.Pixel{})
-    assert Blinkt.Pixelbar.get(pixelbar, 3) != nil
+    Pixels.set(3, %Pixel{})
+    assert Pixels.get(3) != nil
   end
 
-  test "initialize the bar with 8 pixels", %{pixelbar: pixelbar} do
-    Blinkt.Pixelbar.init(pixelbar)
-
-    assert Blinkt.Pixelbar.get(pixelbar, 3) != nil
+  test "is the bar initialized" do
+    assert Pixels.get(3) != nil
   end
 
   test "change the lux of a pixel", %{pixel: pixel} do
-    new = %Blinkt.Pixel{pixel | lux: 0.5}
+    new = %Pixel{pixel | lux: 0.5}
 
     assert new.lux == 0.5
   end
 
   test "initialize a set of pixels and fetch one" do
-    {:ok, pixels} = Blinkt.Pixelbar.start_link(%{})
-    Blinkt.Pixelbar.init(pixels)
-    assert Blinkt.Pixelbar.get(pixels, 1) != nil
+    Pixels.init()
+    assert Pixels.get(1) != nil
   end
 end
 

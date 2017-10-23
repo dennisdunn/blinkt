@@ -1,14 +1,17 @@
 defmodule Blinkt.BlinktTest do
   use ExUnit.Case, async: true
+  alias Blinkt.Pixel
+  alias Blinkt.Pixels
 
   setup do
-    {ok, pixels} = Blinkt.Pixelbar.start_link(%{})
-    %{pixels: Blinkt.Pixelbar.init(pixels)}
+    start_supervised Pixels
+    # Pixels.start_link()
+    Pixels.init()
   end
 
-  test "set the lux", %{pixels: pixels} do
-    Blinkt.Pixelbar.set_lux(pixels, 0.5)
-    %Blinkt.Pixel{lux: lux} = Blinkt.Pixelbar.get(pixels, 1)
+  test "set the lux" do
+    Pixels.set_lux(1, 0.5)
+    %Pixel{lux: lux} = Pixels.get(1)
     assert lux == 0.5
   end
 end
