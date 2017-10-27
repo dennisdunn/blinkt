@@ -1,18 +1,22 @@
 defmodule Blinkt do
   use Bitwise
-  alias Blinkt.Pixel
-  alias Blinkt.Pixels
+  use Agent
   alias Pigpiox.GPIO
 
   @dat 23
   @clk 24
 
-  def start() do
-    Pixels.start_link()
-    Pixels.init()
-    _setup_gpio()
-    :ok
+  def start_link(opts \\ %{}) do
+    Agent.start_link(fn -> <<0::size(8 * 4 * 8)>> end, name: __MODULE__)
   end
+
+  def set_pixel(idx, <<pixel::binary-size(4)>>) when is_binary(pixel) do
+    Agent.update(__MODULE__,(<<pre::size(idx * 4 * 8), ignore::size(4 * 8), rest::binary>> -> pre <> pixel <> rest) )
+  end
+  
+    def get_pixel(idx) do
+      Agent.get(__MODULE__,(<<ignore::size(idx * 4 * 8), pixel::size(4 * 8), rest::binary>> -> pixel) )
+    end
 
   def set_brightness(brightness) do
     for i <- 0..7, do: Pixels.set_pixel(i, brightness) 
@@ -20,32 +24,14 @@ defmodule Blinkt do
   end
 
   def clear() do
-    for i <- 0..7, do: Pixels.set_pixel(i, %Pixel{lux: 0.2})
+    Agent.update(__MODULE__, (_ -> <<0::size(8 * 4 * 8)>>) )
     :ok
   end
 
   def show() do
     _sof()
-    for i <- 0..7, do:  _write_pixel(Pixels.get(i))
+    for _ 0..7 <- Agent.get(__MODULE__, (state->state))
     _eof()
-    :ok
-  end
-
-  def get_pixel(x) do
-    Pixels.get(x)
-  end
-
-  def set_pixel(x, pixel) do
-    Pixels.put(x, pixel)
-  end
-
-  def set_pixel(x, r, g, b, brightness) do
-    Pixels.put(x, %Pixel{red: r, green: g, blue: b, lux: trunc(brightness * 31) &&& 31})
-    :ok
-  end
-
-  def set_all(r, g, b, brightness) do 
-    for i <- 0..7, do: Blinkt.set_pixel(i, r, g, b, brightness)
     :ok
   end
 
@@ -61,20 +47,15 @@ defmodule Blinkt do
     :ok
   end
 
-  defp _write_pixel(pixel) do
-    %Pixel{red: r, green: g, blue: b, lux: brightness} = pixel
-    _write_byte(<<brightness ||| 224>>)
+  defp _write_pixel(<<r,g,b,lux>>) do
+    _write_byte(<<lux ||| 224>>)
     _write_byte(<<b>>)
     _write_byte(<<g>>)
     _write_byte(<<r>>)
     :ok
   end
 
-  defp _write_byte(bits) when bits == <<>> do
-    :ok
-  end
-
-  defp _write_byte(bits) do
+  defp _write_byte(bits)when bits != <<>> do
     <<b::size(1), rest::bitstring>> = bits
     GPIO.write(@dat, b)
     _pulse_gpio_pin(@clk)
@@ -93,5 +74,4 @@ defmodule Blinkt do
     GPIO.set_mode(@clk, :output)
     :ok
   end
-  
 end
