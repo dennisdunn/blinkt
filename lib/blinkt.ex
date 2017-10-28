@@ -6,31 +6,31 @@ defmodule Blinkt do
   @dat 23
   @clk 24
 
+  @buffer 256
+  @pixel 32
+
   def start_link(opts \\ %{}) do
-    Agent.start_link(fn -> <<0::size(8 * 4 * 8)>> end, name: __MODULE__)
+    Agent.start_link(fn -> <<0::size(@buffer)>> end, name: __MODULE__)
   end
 
-  def set_pixel(idx, <<pixel::binary-size(4)>>) when is_binary(pixel) do
-    Agent.update(__MODULE__,(<<pre::size(idx * 4 * 8), ignore::size(4 * 8), rest::binary>> -> pre <> pixel <> rest) )
+  def set_pixel(idx, <<pixel::size(@pixel)>>) do
+    skip = idx * @pixel
+    Agent.update(__MODULE__, fn <<pre::size(skip), ignore::size(@pixel), rest::binary>> -> pre <> pixel <> rest end)
   end
   
-    def get_pixel(idx) do
-      Agent.get(__MODULE__,(<<ignore::size(idx * 4 * 8), pixel::size(4 * 8), rest::binary>> -> pixel) )
+  def get_pixel(idx) do
+      skip = idx * @pixel
+      Agent.get(__MODULE__,  fn <<_::size(skip), pixel::size(@pixel), _::binary>> -> pixel end )
     end
 
-  def set_brightness(brightness) do
-    for i <- 0..7, do: Pixels.set_pixel(i, brightness) 
-    :ok
-  end
-
   def clear() do
-    Agent.update(__MODULE__, (_ -> <<0::size(8 * 4 * 8)>>) )
+    Agent.update(__MODULE__,  fn _ -> <<0::size(@buffer)>> end )
     :ok
   end
 
   def show() do
     _sof()
-    for _ 0..7 <- Agent.get(__MODULE__, (state->state))
+   for <<b::size(8) <- Enum.reverse(Agent.get(__MODULE__, fn state -> state end))>>, do: _write_byte(b);
     _eof()
     :ok
   end
@@ -55,12 +55,14 @@ defmodule Blinkt do
     :ok
   end
 
-  defp _write_byte(bits)when bits != <<>> do
-    <<b::size(1), rest::bitstring>> = bits
-    GPIO.write(@dat, b)
-    _pulse_gpio_pin(@clk)
-    _write_byte(rest)
+  defp _write_byte(byte) do
+    for <<bit::size(1) <- byte>>, do: _write_bit
     :ok
+  end
+
+  defp _write_bit(bit) do
+    GPIO.write(@dat, bit)
+    _pulse_gpio_pin(@clk)
   end
 
   defp _pulse_gpio_pin(pin) do
