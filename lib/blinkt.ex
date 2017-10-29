@@ -6,21 +6,21 @@ defmodule Blinkt do
   @dat 23
   @clk 24
 
-  @buffer 256
-  @pixel 32
+  @buffer 32
+  @pixel 4
 
   def start_link(opts \\ %{}) do
     Agent.start_link(fn -> <<0::size(@buffer)>> end, name: __MODULE__)
   end
 
-  def set_pixel(idx, <<pixel::size(@pixel)>>) do
+  def set_pixel(idx, r, g, b, l) do
     skip = idx * @pixel
-    Agent.update(__MODULE__, fn <<pre::size(skip), ignore::size(@pixel), rest::binary>> -> pre <> pixel <> rest end)
+    Agent.update(__MODULE__, fn <<pre::binary-size(skip), _::binary-size(@pixel), post::binary>> -> pre <> <<l, g, b, r>> <> post end)
   end
   
   def get_pixel(idx) do
       skip = idx * @pixel
-      Agent.get(__MODULE__,  fn <<_::size(skip), pixel::size(@pixel), _::binary>> -> pixel end )
+    Agent.get(__MODULE__,  fn state -> binary_part(state, skip, @pixel) end )
     end
 
   def clear() do
@@ -30,7 +30,7 @@ defmodule Blinkt do
 
   def show() do
     _sof()
-   for <<b::size(8) <- Enum.reverse(Agent.get(__MODULE__, fn state -> state end))>>, do: _write_byte(b);
+   for <<b::binary-size(1) <- Agent.get(__MODULE__, fn state -> state end)>>, do: _write_byte(b);
     _eof()
     :ok
   end
@@ -47,16 +47,8 @@ defmodule Blinkt do
     :ok
   end
 
-  defp _write_pixel(<<r,g,b,lux>>) do
-    _write_byte(<<lux ||| 224>>)
-    _write_byte(<<b>>)
-    _write_byte(<<g>>)
-    _write_byte(<<r>>)
-    :ok
-  end
-
   defp _write_byte(byte) do
-    for <<bit::size(1) <- byte>>, do: _write_bit
+    for <<bit::size(1) <- byte>>, do: _write_bit(bit)
     :ok
   end
 
