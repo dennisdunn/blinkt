@@ -10,12 +10,12 @@ defmodule Blinkt do
   @pixel 4
 
   def start_link(opts \\ %{}) do
-    Agent.start_link(fn -> <<0::size(256)>> end, name: __MODULE__)
+    Agent.start_link(fn ->  <<3758096384::size(32), 3758096384::size(32), 3758096384::size(32), 3758096384::size(32), 3758096384::size(32), 3758096384::size(32), 3758096384::size(32), 3758096384::size(32)>> end, name: __MODULE__)
   end
 
   def set_pixel(idx, r, g, b, l) do
     skip = idx * 4
-    Agent.update(__MODULE__, fn <<pre::binary-size(skip), _::binary-size(4), post::binary>> -> pre <> <<l, b, g, r>> <> post end)
+    Agent.update(__MODULE__, fn <<pre::binary-size(skip), _::binary-size(4), post::binary>> -> pre <> <<l ||| 224, b, g, r>> <> post end)
   end
 
   def get_pixel(idx) do
@@ -36,20 +36,13 @@ defmodule Blinkt do
   end
 
   def clear() do
-    Agent.update(__MODULE__,  fn _ -> <<0::size(256)>> end )
-    :ok
   end
 
   def show() do
     _sof()
-    for <<pixel::binary-size(4) <- Agent.get(__MODULE__, fn state -> state end)>>, do: _write_pixel(pixel);
+    for <<bit::size(1) <- Agent.get(__MODULE__, fn state -> state end)>>, do: _write_bit(bit);
     _eof()
     :ok
-  end
-
-  def _write_pixel(<<l, c::binary>>) do
-    for <<bit::size(1) <- <<l ||| 224>> >>, do: _write_bit(bit)
-    for <<bit::size(1) <- c>>, do: _write_bit(bit)
   end
 
   defp _sof do
